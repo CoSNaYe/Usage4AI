@@ -145,7 +145,7 @@ class UsageManager: ObservableObject {
         await performFetch()
     }
 
-    private func performFetch() async {
+    private func performFetch(isRetry: Bool = false) async {
         isLoading = true
         defer { isLoading = false }
 
@@ -179,9 +179,18 @@ class UsageManager: ObservableObject {
             case 200:
                 break
             case 401:
-                // Token 失效，清除快取並重新讀取
+                // Token 失效，清除快取
                 cachedToken = nil
                 KeychainHelper.clearCachedToken()
+
+                // 如果不是重試，嘗試從 Claude Code Keychain 重新讀取 token 並重試一次
+                if !isRetry {
+                    refreshToken()
+                    if cachedToken != nil {
+                        await performFetch(isRetry: true)
+                        return
+                    }
+                }
                 throw APIError.unauthorized
             case 429:
                 throw APIError.rateLimited
