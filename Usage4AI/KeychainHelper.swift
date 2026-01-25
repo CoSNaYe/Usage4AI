@@ -54,7 +54,9 @@ struct KeychainHelper {
 
     /// Save token to own keychain
     private static func saveOwnToken(_ token: String) throws {
-        let tokenData = token.data(using: .utf8)!
+        guard let tokenData = token.data(using: .utf8) else {
+            throw KeychainError.unexpectedData
+        }
 
         // Try to delete existing token first
         let deleteQuery: [String: Any] = [
