@@ -76,7 +76,7 @@ struct UsageView: View {
 
                 Divider()
 
-                // 顯示錯誤（即使有舊資料）
+                // Show error (even if there's stale data)
                 if let error = manager.lastError {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")

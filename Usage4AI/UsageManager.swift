@@ -21,28 +21,34 @@ class UsageManager: ObservableObject {
     @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true
 
     private var timer: Timer?
-    private let apiURL = URL(string: Constants.API.usageURL)!
+    private let apiURL: URL
     private var appStateObservers: [Any] = []
     private var hasNotifiedCritical = false
     private var lastNotifiedPercentage: Int = 0
 
-    // 快取
+    // Cache
     private var cachedAllDisplayUsages: [DisplayUsage]?
     private var cachedMaxDisplayUsage: DisplayUsage?
     private var cachedToken: String?
 
-    // 網路監控
+    // Network monitoring
     private let networkMonitor = NWPathMonitor()
     private let networkQueue = DispatchQueue(label: "NetworkMonitor")
     private var wasNetworkUnavailable = false
 
-    // 重試機制
+    // Retry mechanism
     private var retryCount = 0
     private let maxRetryCount = 3
     private var retryTask: Task<Void, Never>?
 
     init() {
-        // 啟動時讀取一次 token，避免每次刷新都存取 Keychain
+        // Validate API URL (compile-time constant, invalid URL indicates a code error)
+        guard let url = URL(string: Constants.API.usageURL) else {
+            preconditionFailure("Invalid API URL: \(Constants.API.usageURL)")
+        }
+        apiURL = url
+
+        // Read token once at startup to avoid repeated Keychain access
         do {
             cachedToken = try KeychainHelper.getOAuthToken()
         } catch {
@@ -67,9 +73,9 @@ class UsageManager: ObservableObject {
                 self.isNetworkAvailable = isAvailable
                 self.wasNetworkUnavailable = !isAvailable
 
-                // 網路恢復時自動重新整理
+                // Auto-refresh when network recovers
                 if isAvailable && wasUnavailable {
-                    self.retryCount = 0  // 重置重試計數
+                    self.retryCount = 0  // Reset retry count
                     await self.fetchUsage()
                 }
             }
@@ -138,7 +144,7 @@ class UsageManager: ObservableObject {
     }
 
     func fetchUsage() async {
-        // 取消任何正在進行的重試
+        // Cancel any pending retry
         retryTask?.cancel()
         retryTask = nil
 
@@ -150,7 +156,7 @@ class UsageManager: ObservableObject {
         defer { isLoading = false }
 
         do {
-            // 使用快取的 token，如果沒有則嘗試從 Keychain 讀取
+            // Use cached token, attempt to read from Keychain if not available
             if cachedToken == nil {
                 refreshToken()
             }
@@ -183,11 +189,11 @@ class UsageManager: ObservableObject {
             case 200:
                 break
             case 401:
-                // Token 失效，清除快取
+                // Token expired, clear cache
                 cachedToken = nil
                 KeychainHelper.clearCachedToken()
 
-                // 如果不是重試，嘗試從 Claude Code Keychain 重新讀取 token 並重試一次
+                // If not a retry, attempt to re-read token from Claude Code Keychain and retry once
                 if !isRetry {
                     refreshToken()
                     if cachedToken != nil {
@@ -213,7 +219,7 @@ class UsageManager: ObservableObject {
 
             lastUpdated = Date()
             lastError = nil
-            retryCount = 0  // 成功後重置重試計數
+            retryCount = 0  // Reset retry count on success
         } catch let error as APIError {
             lastError = error
             scheduleRetryIfNeeded(for: error)
@@ -227,13 +233,13 @@ class UsageManager: ObservableObject {
     private func scheduleRetryIfNeeded(for error: APIError) {
         guard error.isRetryable else { return }
         guard retryCount < maxRetryCount else {
-            retryCount = 0  // 達到最大重試次數後重置
+            retryCount = 0  // Reset after reaching max retry count
             return
         }
 
         retryCount += 1
 
-        // 指數退避：2^retryCount 秒 (2s, 4s, 8s)
+        // Exponential backoff: 2^retryCount seconds (2s, 4s, 8s)
         let delay = pow(2.0, Double(retryCount))
 
         retryTask = Task { [weak self] in
@@ -242,12 +248,12 @@ class UsageManager: ObservableObject {
                 guard !Task.isCancelled else { return }
                 await self?.performFetch()
             } catch {
-                // Task 被取消
+                // Task cancelled
             }
         }
     }
 
-    /// 手動刷新 token（需要時才呼叫）
+    /// Manually refresh token (call only when needed)
     func refreshToken() {
         do {
             cachedToken = try KeychainHelper.getOAuthToken()
@@ -333,7 +339,7 @@ class UsageManager: ObservableObject {
         }
     }
 
-    // MARK: - 通知
+    // MARK: - Notifications
 
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
@@ -350,7 +356,7 @@ class UsageManager: ObservableObject {
             return
         }
 
-        // 只在首次達到 90% 或每增加 5% 時通知
+        // Only notify on first reaching 90% or every 5% increase
         let shouldNotify = !hasNotifiedCritical ||
             (maxUsage.percentage >= lastNotifiedPercentage + 5)
 

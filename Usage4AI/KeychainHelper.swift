@@ -14,23 +14,23 @@ struct KeychainHelper {
     private static let ownService = "Usage4AI-token"
     private static let account = "oauth-token"
 
-    /// 取得 OAuth Token（優先從自己的 keychain 讀取，避免重複詢問密碼）
+    /// Get OAuth Token (prioritize reading from own keychain to avoid repeated password prompts)
     static func getOAuthToken() throws -> String {
-        // 1. 先嘗試從自己的 keychain 讀取
+        // 1. Try reading from own keychain first
         if let cachedToken = try? getOwnToken() {
             return cachedToken
         }
 
-        // 2. 從 Claude Code 的 keychain 讀取
+        // 2. Read from Claude Code's keychain
         let token = try getClaudeCodeToken()
 
-        // 3. 存到自己的 keychain（下次就不用再問密碼）
+        // 3. Save to own keychain (no password prompt next time)
         try? saveOwnToken(token)
 
         return token
     }
 
-    /// 從自己的 keychain 讀取 token
+    /// Read token from own keychain
     private static func getOwnToken() throws -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -52,11 +52,11 @@ struct KeychainHelper {
         return token
     }
 
-    /// 儲存 token 到自己的 keychain
+    /// Save token to own keychain
     private static func saveOwnToken(_ token: String) throws {
         let tokenData = token.data(using: .utf8)!
 
-        // 先嘗試刪除舊的
+        // Try to delete existing token first
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: ownService,
@@ -64,7 +64,7 @@ struct KeychainHelper {
         ]
         SecItemDelete(deleteQuery as CFDictionary)
 
-        // 新增 token
+        // Add new token
         let addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: ownService,
@@ -79,7 +79,7 @@ struct KeychainHelper {
         }
     }
 
-    /// 清除自己的 token 快取（token 失效時呼叫）
+    /// Clear own token cache (call when token becomes invalid)
     static func clearCachedToken() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -89,7 +89,7 @@ struct KeychainHelper {
         SecItemDelete(query as CFDictionary)
     }
 
-    /// 從 Claude Code 的 keychain 讀取 token
+    /// Read token from Claude Code's keychain
     private static func getClaudeCodeToken() throws -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

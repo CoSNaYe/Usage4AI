@@ -4,9 +4,9 @@ enum APIError: Error, LocalizedError {
     case unauthorized           // 401
     case rateLimited            // 429
     case serverError(Int)       // 5xx
-    case networkError(Error)    // 網路錯誤
-    case invalidResponse        // 無效回應
-    case decodingError(Error)   // JSON 解析失敗
+    case networkError(Error)    // Network error
+    case invalidResponse        // Invalid response
+    case decodingError(Error)   // JSON decoding failed
 
     var errorDescription: String? {
         switch self {
@@ -55,7 +55,7 @@ struct UsageResponse: Codable {
 }
 
 struct UsageLimit: Codable {
-    /// API 回傳的 utilization 是百分比 (0-100)，不是小數
+    /// API returns utilization as percentage (0-100), not decimal
     let utilization: Double
     let resetsAt: String?
 
@@ -83,7 +83,7 @@ struct DisplayUsage {
     let percentage: Int
     let remainingTime: String
     let status: UsageStatus
-    let timeProgress: Double  // 0.0 = 剛開始, 1.0 = 即將重置
+    let timeProgress: Double  // 0.0 = just started, 1.0 = about to reset
 
     init(name: String, icon: String, limit: UsageLimit) {
         self.name = name
@@ -119,7 +119,7 @@ struct DisplayUsage {
 
         if interval <= 0 { return ("now", 1.0) }
 
-        // 計算時間進度 (越接近重置時間，進度越高)
+        // Calculate time progress (higher as reset time approaches)
         let totalSeconds = Double(windowHours * 3600)
         let elapsedSeconds = totalSeconds - interval
         let progress = min(1.0, max(0.0, elapsedSeconds / totalSeconds))

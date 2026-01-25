@@ -46,7 +46,7 @@ struct MenuBarLabel: View {
     private var usagePercentage: Int {
         guard let usage = manager.usage, let fiveHour = usage.fiveHour else { return 0 }
         let util = fiveHour.utilization
-        // < 90% 無條件進位，>= 90% 無條件捨去
+        // < 90% round up, >= 90% round down
         if util < Constants.Usage.criticalThreshold {
             return Int(ceil(util))
         } else {
@@ -67,13 +67,13 @@ struct MenuBarLabel: View {
         let image = NSImage(size: NSSize(width: barWidth, height: totalHeight), flipped: true) { rect in
             let cornerRadius = Constants.MenuBar.cornerRadius
 
-            // 上層背景
+            // Top bar background
             let topBgRect = NSRect(x: 0, y: 0, width: barWidth, height: barHeight)
             let topBgPath = NSBezierPath(roundedRect: topBgRect, xRadius: cornerRadius, yRadius: cornerRadius)
             NSColor.white.setFill()
             topBgPath.fill()
 
-            // 上層進度
+            // Top bar progress
             if self.usageProgress > 0 {
                 let progressWidth = max(barWidth * self.usageProgress, cornerRadius * 2)
                 let topProgressRect = NSRect(x: 0, y: 0, width: progressWidth, height: barHeight)
@@ -82,14 +82,14 @@ struct MenuBarLabel: View {
                 topProgressPath.fill()
             }
 
-            // 下層背景
+            // Bottom bar background
             let bottomY = barHeight + spacing
             let bottomBgRect = NSRect(x: 0, y: bottomY, width: barWidth, height: barHeight)
             let bottomBgPath = NSBezierPath(roundedRect: bottomBgRect, xRadius: cornerRadius, yRadius: cornerRadius)
             NSColor.white.setFill()
             bottomBgPath.fill()
 
-            // 下層進度（時間）
+            // Bottom bar progress (time)
             if self.manager.timeProgress > 0 {
                 let timeProgressWidth = max(barWidth * self.manager.timeProgress, cornerRadius * 2)
                 let bottomProgressRect = NSRect(x: 0, y: bottomY, width: timeProgressWidth, height: barHeight)
