@@ -91,6 +91,11 @@ struct KeychainHelper {
         SecItemDelete(query as CFDictionary)
     }
 
+    /// Read token directly from Claude Code's keychain (bypasses own cache)
+    static func getClaudeCodeTokenDirectly() throws -> String {
+        return try getClaudeCodeToken()
+    }
+
     /// Read token from Claude Code's keychain
     private static func getClaudeCodeToken() throws -> String {
         let query: [String: Any] = [
