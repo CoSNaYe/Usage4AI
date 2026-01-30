@@ -122,6 +122,11 @@ struct UsageView: View {
         }
         .padding()
         .frame(width: 280)
+        .onAppear {
+            Task {
+                await manager.checkAndRefreshTokenIfNeeded()
+            }
+        }
     }
 }
 

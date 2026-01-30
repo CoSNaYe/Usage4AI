@@ -253,6 +253,25 @@ class UsageManager: ObservableObject {
         }
     }
 
+    /// Check and refresh token if it has changed in Claude Code
+    func checkAndRefreshTokenIfNeeded() async {
+        do {
+            // Read directly from Claude Code to check for changes
+            let freshToken = try KeychainHelper.getClaudeCodeTokenDirectly()
+
+            // Check if token has changed
+            if cachedToken != freshToken {
+                // Token changed, update caches and refetch
+                cachedToken = freshToken
+                KeychainHelper.clearCachedToken()
+                try? KeychainHelper.getOAuthToken()  // Re-cache the new token
+                await fetchUsage()
+            }
+        } catch {
+            // Failed to read token, keep current state
+        }
+    }
+
     var timeProgress: Double {
         guard let usage = usage, let fiveHour = usage.fiveHour else { return 0.0 }
         let fiveHourUsage = DisplayUsage(name: "5-Hour Session", icon: "clock", limit: fiveHour)
